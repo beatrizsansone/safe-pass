@@ -1,0 +1,174 @@
+generator client {
+  provider = "prisma-client-js"
+  engineType = "client"
+}
+datasource db {
+  provider = "postgresql"
+}
+enum Role {
+  ADMIN
+  PROJECT_MANAGER
+  TEAM_MEMBER
+  FREELANCER
+  CLIENT
+}
+model User {
+  id String @id @default(uuid()) @db.Uuid
+  name String
+  email String @unique
+  passwordHash String
+  role Role @default(TEAM_MEMBER)
+  active Boolean @default(true)
+  createdAt DateTime @default(now())
+  sessions Session[]
+  resets PasswordReset[]
+  brands Brand[]
+  memberships ProjectMember[]
+  clientAccess BrandAccess[]
+  activities Activity[]
+}
+model Session {
+  id String @id @default(uuid()) @db.Uuid
+  tokenHash String @unique
+  userId String @db.Uuid
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  expiresAt DateTime
+  @@index([expiresAt])
+}
+model PasswordReset {
+  id String @id @default(uuid()) @db.Uuid
+  tokenHash String @unique
+  userId String @db.Uuid
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  expiresAt DateTime
+}
+model AuthAttempt {
+  key String @id
+  count Int @default(1)
+  resetAt DateTime
+}
+model Brand {
+  id String @id @default(uuid()) @db.Uuid
+  name String
+  legalName String @default("")
+  cnpj String @default("")
+  segment String @default("")
+  website String @default("")
+  instagram String @default("")
+  email String @default("")
+  phone String @default("")
+  city String @default("")
+  notes String @default("")
+  ownerId String @db.Uuid
+  owner User @relation(fields:[ownerId],references:[id])
+  archivedAt DateTime?
+  createdAt DateTime @default(now())
+  contacts Contact[]
+  opportunities Opportunity[]
+  projects Project[]
+  access BrandAccess[]
+  @@index([ownerId, archivedAt])
+}
+model BrandAccess {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  brandId String @db.Uuid
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  brand Brand @relation(fields:[brandId],references:[id],onDelete:Cascade)
+  @@unique([userId,brandId])
+}
+model Contact {
+  id String @id @default(uuid()) @db.Uuid
+  name String
+  title String @default("")
+  email String @default("")
+  phone String @default("")
+  brandId String @db.Uuid
+  brand Brand @relation(fields:[brandId],references:[id])
+  createdAt DateTime @default(now())
+  @@index([brandId])
+}
+model Opportunity {
+  id String @id @default(uuid()) @db.Uuid
+  title String
+  stage Int @default(0)
+  notes String @default("")
+  brandId String @db.Uuid
+  brand Brand @relation(fields:[brandId],references:[id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  briefing Briefing?
+  meetings Meeting[]
+  @@index([brandId,stage])
+}
+model Briefing {
+  id String @id @default(uuid()) @db.Uuid
+  opportunityId String @unique @db.Uuid
+  opportunity Opportunity @relation(fields:[opportunityId],references:[id])
+  objective String
+  audience String @default("")
+  experience String @default("")
+  city String @default("")
+  participants Int?
+  budgetCents Int?
+  references String @default("")
+  restrictions String @default("")
+  notes String @default("")
+  status String @default("Rascunho")
+  updatedAt DateTime @updatedAt
+}
+model Meeting {
+  id String @id @default(uuid()) @db.Uuid
+  opportunityId String @db.Uuid
+  opportunity Opportunity @relation(fields:[opportunityId],references:[id])
+  title String
+  startsAt DateTime
+  notes String @default("")
+  @@index([startsAt])
+}
+model Project {
+  id String @id @default(uuid()) @db.Uuid
+  name String
+  description String @default("")
+  status String @default("Contratação")
+  location String @default("")
+  eventDate DateTime?
+  brandId String @db.Uuid
+  brand Brand @relation(fields:[brandId],references:[id])
+  createdAt DateTime @default(now())
+  archivedAt DateTime?
+  members ProjectMember[]
+  tasks Task[]
+  @@index([brandId,archivedAt])
+}
+model ProjectMember {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  projectId String @db.Uuid
+  user User @relation(fields:[userId],references:[id])
+  project Project @relation(fields:[projectId],references:[id])
+  canManage Boolean @default(false)
+  canFinance Boolean @default(false)
+  @@unique([userId,projectId])
+}
+model Task {
+  id String @id @default(uuid()) @db.Uuid
+  title String
+  description String @default("")
+  status String @default("A fazer")
+  priority String @default("Normal")
+  dueAt DateTime?
+  projectId String @db.Uuid
+  project Project @relation(fields:[projectId],references:[id])
+  createdAt DateTime @default(now())
+  @@index([projectId,status])
+}
+model Activity {
+  id String @id @default(uuid()) @db.Uuid
+  actorId String @db.Uuid
+  actor User @relation(fields:[actorId],references:[id])
+  action String
+  entityId String @db.Uuid
+  createdAt DateTime @default(now())
+  @@index([createdAt])
+}
